@@ -8,6 +8,7 @@ common_src_files := \
 	NetlinkHandler.cpp \
 	Volume.cpp \
 	DirectVolume.cpp \
+	AutoVolume.cpp \
 	Process.cpp \
 	Ext4.cpp \
 	Fat.cpp \

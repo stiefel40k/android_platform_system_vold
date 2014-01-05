@@ -34,7 +34,7 @@
 #include "VolumeManager.h"
 #include "CommandListener.h"
 #include "NetlinkManager.h"
-#include "DirectVolume.h"
+#include "AutoVolume.h"
 #include "cryptfs.h"
 
 static int process_config(VolumeManager *vm);
@@ -158,14 +158,46 @@ static int process_config(VolumeManager *vm)
     int i;
     int ret = -1;
     int flags;
+    fstab_rec rec;
+
+    memset(&rec, 0, sizeof(fstab_rec));
+    rec.partnum = -1;
+    rec.mount_point = "auto";
+    if (FILE *fp = fopen("/proc/cmdline", "r")) {
+        while (fscanf(fp, "%s", propbuf) > 0) {
+            if (!strncmp(propbuf, "SDCARD=", 7)) {
+                const char *sdcard = propbuf + 7;
+                if (*sdcard) {
+                    rec.label = "sdcard1";
+                    if (Volume *vol = new AutoVolume(vm, &rec, 0, sdcard)) {
+                        vm->addVolume(vol);
+                        break;
+                    }
+                }
+            }
+        }
+        fclose(fp);
+    }
 
     property_get("ro.hardware", propbuf, "");
     snprintf(fstab_filename, sizeof(fstab_filename), FSTAB_PREFIX"%s", propbuf);
 
     fstab = fs_mgr_read_fstab(fstab_filename);
     if (!fstab) {
-        SLOGE("failed to open %s\n", fstab_filename);
-        return -1;
+        SLOGD("failed to open %s, use AutoVolume", fstab_filename);
+        // no volume added yet, create 4 AutoVolume objects
+        // to mount USB/MMC/SD automatically
+        Volume *vol = 0;
+        char label[] = "usb0";
+        rec.label = label;
+        while (label[3] < '4') {
+            if ((vol = new AutoVolume(vm, &rec)))
+                vm->addVolume(vol);
+            else
+                break;
+            label[3]++;
+        }
+        return vol ? 0 : -ENOMEM;
     }
 
     /* Loop through entries looking for ones that vold manages */
