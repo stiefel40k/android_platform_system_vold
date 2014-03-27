@@ -161,13 +161,15 @@ static int process_config(VolumeManager *vm)
 
     memset(&rec, 0, sizeof(fstab_rec));
     rec.partnum = -1;
-    rec.mount_point = "auto";
+    char mount_point[] = "auto";
+    rec.mount_point = mount_point;
     if (FILE *fp = fopen("/proc/cmdline", "r")) {
         while (fscanf(fp, "%s", propbuf) > 0) {
             if (!strncmp(propbuf, "SDCARD=", 7)) {
                 const char *sdcard = propbuf + 7;
                 if (*sdcard) {
-                    rec.label = "sdcard1";
+                    char label[] = "sdcard1";
+                    rec.label = label;
                     if (Volume *vol = new AutoVolume(vm, &rec, 0, sdcard)) {
                         vm->addVolume(vol);
                         break;
