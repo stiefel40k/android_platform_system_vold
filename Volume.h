@@ -17,6 +17,9 @@
 #ifndef _VOLUME_H
 #define _VOLUME_H
 
+// begin WITH_TAINT_TRACKING
+#define TAINT_EXT4
+// end WITH_TAINT_TRACKING
 #ifdef __cplusplus
 #include <utils/List.h>
 #include <fs_mgr.h>

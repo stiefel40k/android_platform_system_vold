@@ -64,13 +64,32 @@ int Ext4::doMount(const char *fsPath, const char *mountPoint, bool ro, bool remo
         data = "context=u:object_r:sdcard_external:s0";
     }
 #endif
+#ifdef TAINT_EXT4
+    rc = mount(fsPath, mountPoint, "ext4", flags, "user_xattr");
+#else
     rc = mount(fsPath, mountPoint, "ext4", flags, data);
+// TODO: SZG not sure if data or NULL should be used
+#endif /*TAINT_EXT4*/
 
     if (rc && errno == EROFS) {
         SLOGE("%s appears to be a read only filesystem - retrying mount RO", fsPath);
         flags |= MS_RDONLY;
+#ifdef TAINT_EXT4
+        rc = mount(fsPath, mountPoint, "ext4", flags, "user_xattr");
+#else
         rc = mount(fsPath, mountPoint, "ext4", flags, data);
+// TODO: SZG not sure if data or NULL should be used
+#endif /*TAINT_EXT4*/
     }
+
+#ifdef TAINT_EXT4
+    // Chmod the mount point so that its a free-for-all.
+    // (required for consistency with VFAT.. sigh)
+    if (chmod(mountPoint, 0777) < 0) {
+        SLOGE("Failed to chmod %s (%s)", mountPoint, strerror(errno));
+        return -errno;
+    }
+#endif /*TAINT_EXT4*/
 
     return rc;
 }
